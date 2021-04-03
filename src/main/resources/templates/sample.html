@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <title>Sample Page</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="../..">Home</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="#">Sample</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="container">
+      <h2 class="my-4">Greeting</h2>
+      <div class="alert alert-success">
+        <span th:text="#{greeting}">MESSAGE</span>
+      </div>
+      <h2 class="my-4">Config</h2>
+      <p>The current time is <span th:text="${model.now}">TIMESTAMP</span>.</p>
+      <table class="table table-sm">
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>app.sample.config</td>
+          <td th:text="${model.sampleConfig}">VALUE</td>
+        </tr>
+      </table>
+      <h2 class="my-4">Environment Variables</h2>
+      <table class="table table-sm">
+        <tr>
+          <th>Variable</th>
+          <th>Value</th>
+        </tr>
+        <tr th:each="e : ${model.env}">
+          <td th:text="${e.key}">KEY</td>
+          <td th:text="${e.value}">VALUE</td>
+        </tr>
+      </table>
+      <h2 class="my-4">System Properties</h2>
+      <table class="table table-sm">
+        <tr>
+          <th>Property</th>
+          <th>Value</th>
+        </tr>
+        <tr th:each="e : ${model.props}">
+          <td th:text="${e.key}">KEY</td>
+          <td th:text="${e.value}">VALUE</td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
