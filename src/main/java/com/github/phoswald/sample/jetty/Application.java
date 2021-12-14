@@ -44,11 +44,12 @@ public class Application {
     private static final Logger logger = LogManager.getLogger();
     private static final ConfigProvider config = new ConfigProvider();
     private static final int port = Integer.parseInt(config.getConfigProperty("app.http.port").orElse("8080"));
-    private static final XStream xstream = new XStream(); // TODO configure security
+    private static final XStream xstream = new XStream();
     private static final Gson gson = new Gson();
     private static final EntityManagerFactory emf = createEntityManagerFactory();
 
     static {
+        xstream.allowTypes(new Class[] { EchoRequest.class, EchoResponse.class });
         xstream.alias("EchoRequest", EchoRequest.class);
         xstream.alias("EchoResponse", EchoResponse.class);
     }
