@@ -1,4 +1,4 @@
-FROM adoptopenjdk:11-jre-hotspot
+FROM eclipse-temurin:17
 
 ENV TZ                Europe/Zurich
 ENV LANG              de_CH.UTF-8
