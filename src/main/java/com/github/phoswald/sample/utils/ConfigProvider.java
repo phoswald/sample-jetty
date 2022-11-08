@@ -1,4 +1,4 @@
-package com.github.phoswald.sample;
+package com.github.phoswald.sample.utils;
 
 import java.util.Optional;
 

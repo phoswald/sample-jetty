@@ -1,7 +1,8 @@
-package com.github.phoswald.sample.jetty;
+package com.github.phoswald.sample;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,9 +12,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,61 +23,78 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 
-import com.github.phoswald.sample.ConfigProvider;
 import com.github.phoswald.sample.sample.EchoRequest;
-import com.github.phoswald.sample.sample.EchoResponse;
 import com.github.phoswald.sample.sample.SampleController;
 import com.github.phoswald.sample.sample.SampleResource;
 import com.github.phoswald.sample.task.TaskController;
-import com.github.phoswald.sample.task.TaskRepository;
-import com.google.gson.Gson;
-import com.thoughtworks.xstream.XStream;
+import com.github.phoswald.sample.task.TaskEntity;
+import com.github.phoswald.sample.task.TaskResource;
+import com.github.phoswald.sample.utils.ConfigProvider;
 
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.xml.bind.JAXB;
 
 public class Application {
 
     private static final Logger logger = LogManager.getLogger();
-    private static final ConfigProvider config = new ConfigProvider();
-    private static final int port = Integer.parseInt(config.getConfigProperty("app.http.port").orElse("8080"));
-    private static final XStream xstream = new XStream();
-    private static final Gson gson = new Gson();
-    private static final EntityManagerFactory emf = createEntityManagerFactory();
+    private static final Jsonb json = JsonbBuilder.create();
 
-    static {
-        xstream.allowTypes(new Class[] { EchoRequest.class, EchoResponse.class });
-        xstream.alias("EchoRequest", EchoRequest.class);
-        xstream.alias("EchoResponse", EchoResponse.class);
+    private final int port;
+    private final SampleResource sampleResource;
+    private final SampleController sampleController;
+    private final TaskResource taskResource;
+    private final TaskController taskController;
+
+    private Server server;
+
+    public Application( //
+            ConfigProvider config, //
+            SampleResource sampleResource, //
+            SampleController sampleController, //
+            TaskResource taskResource, //
+            TaskController taskController) {
+        this.port = Integer.parseInt(config.getConfigProperty("app.http.port").orElse("8080"));
+        this.sampleResource = sampleResource;
+        this.sampleController = sampleController;
+        this.taskResource = taskResource;
+        this.taskController = taskController;
     }
 
     public static void main(String[] args) throws Exception {
+        var module = new ApplicationModule() { };
+        module.getApplication().start();
+    }
+
+    void start() throws Exception {
         logger.info("sample-jetty is starting, port=" + port);
 
-        Server server = new Server(port);
+        server = new Server(port);
         server.setHandler(routes( //
                 files("/resources"), //
-                get("/app/rest/sample/time", createHandler(() -> new SampleResource().getTime())), //
-                get("/app/rest/sample/config", createHandler(() -> new SampleResource().getConfig())), //
-                post("/app/rest/sample/echo-xml",
-                        createXmlHandler(EchoRequest.class, reqBody -> new SampleResource().postEcho(reqBody))), //
-                post("/app/rest/sample/echo-json",
-                        createJsonHandler(EchoRequest.class, reqBody -> new SampleResource().postEcho(reqBody))), //
-                get("/app/pages/sample", createHtmlHandler(() -> new SampleController().getSamplePage())), //
-                get("/app/pages/tasks", createHtmlHandler(() -> createTaskController().getTasksPage())), //
-                post("/app/pages/tasks",
-                        createHtmlHandlerEx(params -> createTaskController().postTasksPage(params.get("title"),
-                                params.get("description")))), //
-                get("/app/pages/tasks/([0-9a-z-]+)",
-                        createHtmlHandlerEx(params -> createTaskController().getTaskPage(params.get("1" /* "id" */),
-                                params.get("action")))), //
-                post("/app/pages/tasks/([0-9a-z-]+)",
-                        createHtmlHandlerEx(params -> createTaskController().postTaskPage(params.get("1" /* "id" */),
-                                params.get("action"), params.get("title"), params.get("description"),
-                                params.get("done")))) //
+                get("/app/rest/sample/time", createHandler(() -> sampleResource.getTime())), //
+                get("/app/rest/sample/config", createHandler(() -> sampleResource.getConfig())), //
+                post("/app/rest/sample/echo-xml", createXmlHandler(EchoRequest.class, reqBody -> sampleResource.postEcho(reqBody))), //
+                post("/app/rest/sample/echo-json", createJsonHandler(EchoRequest.class, reqBody -> sampleResource.postEcho(reqBody))), //
+//              get("/app/rest/tasks", createJsonHandler0(() -> taskResource.getTasks())), //
+                post("/app/rest/tasks", createJsonHandler(TaskEntity.class, reqBody -> taskResource.postTasks(reqBody))), //
+//              get("/app/rest/tasks/:id", createJsonHandlerEx(req -> taskResource.getTask(req.params("id")))), //
+//              put("/app/rest/tasks/:id", createJsonHandlerEx(TaskEntity.class, (req, reqBody) -> taskResource.putTask(req.params("id"), reqBody))), //
+//              delete("/app/rest/tasks/:id", createJsonHandlerEx(req -> taskResource.deleteTask(req.params("id")))), //
+                get("/app/pages/sample", createHtmlHandler(() -> sampleController.getSamplePage())), //
+                get("/app/pages/tasks", createHtmlHandler(() -> taskController.getTasksPage())), //
+                post("/app/pages/tasks", createHtmlHandlerEx(params -> taskController.postTasksPage(params.get("title"), params.get("description")))), //
+                get("/app/pages/tasks/([0-9a-z-]+)", createHtmlHandlerEx(params -> taskController.getTaskPage(params.get("1" /* "id" */), params.get("action")))), //
+                post("/app/pages/tasks/([0-9a-z-]+)", createHtmlHandlerEx(params -> taskController.postTaskPage(params.get("1" /* "id" */), params.get("action"), params.get("title"), params.get("description"), params.get("done")))) //
         ));
         server.start();
+    }
+
+    void stop() throws Exception {
+        server.stop();
     }
 
     static Handler routes(Handler... routes) {
@@ -136,18 +151,23 @@ public class Application {
     static <R> MyHandler createXmlHandler(Class<R> reqClass, Function<R, Object> callback) {
         return (Map<String, String> params, HttpServletRequest request, HttpServletResponse response) -> {
             response.setContentType("text/xml");
-            response.getOutputStream()
-                    .write(xstream.toXML(callback.apply(reqClass.cast(xstream.fromXML(request.getInputStream()))))
-                            .getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().write(serializeXml(callback.apply(
+                    deserializeXml(reqClass, request.getInputStream()))).getBytes(StandardCharsets.UTF_8));
         };
     }
+
+//    static <R> MyHandler createJsonHandler0(Supplier<Object> callback) {
+//        return (Map<String, String> params, HttpServletRequest request, HttpServletResponse response) -> {
+//            response.setContentType("application/json");
+//            response.getOutputStream().write(serializeJson(callback.get()).getBytes(StandardCharsets.UTF_8));
+//        };
+//    }
 
     static <R> MyHandler createJsonHandler(Class<R> reqClass, Function<R, Object> callback) {
         return (Map<String, String> params, HttpServletRequest request, HttpServletResponse response) -> {
             response.setContentType("application/json");
-            response.getOutputStream().write(gson
-                    .toJson(callback.apply(gson.fromJson(new InputStreamReader(request.getInputStream()), reqClass)))
-                    .getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().write(serializeJson(callback.apply(
+                    deserializeJson(reqClass, request.getInputStream()))).getBytes(StandardCharsets.UTF_8));
         };
     }
 
@@ -172,22 +192,23 @@ public class Application {
             response.getOutputStream().write(result.getBytes(StandardCharsets.UTF_8));
         }
     }
-    
-    private static TaskController createTaskController() {
-        return new TaskController(createTaskRepository());
+
+    private static String serializeXml(Object object) {
+        var buffer = new StringWriter();
+        JAXB.marshal(object, buffer);
+        return buffer.toString();
     }
 
-    private static TaskRepository createTaskRepository() {
-        return new TaskRepository(emf.createEntityManager()); // TODO review cleanup
+    private static <T> T deserializeXml(Class<T> clazz, InputStream stream) {
+        return JAXB.unmarshal(stream, clazz);
     }
 
-    private static EntityManagerFactory createEntityManagerFactory() {
-        Map<String, String> props = new HashMap<>();
-        config.getConfigProperty("app.jdbc.driver").ifPresent(v -> props.put("javax.persistence.jdbc.driver", v));
-        config.getConfigProperty("app.jdbc.url").ifPresent(v -> props.put("javax.persistence.jdbc.url", v));
-        config.getConfigProperty("app.jdbc.username").ifPresent(v -> props.put("javax.persistence.jdbc.user", v));
-        config.getConfigProperty("app.jdbc.password").ifPresent(v -> props.put("javax.persistence.jdbc.password", v));
-        return Persistence.createEntityManagerFactory("taskDS", props);
+    private static String serializeJson(Object object) {
+        return json.toJson(object);
+    }
+
+    private static <T> T deserializeJson(Class<T> clazz, InputStream stream) {
+        return json.fromJson(stream, clazz);
     }
 
     interface MyHandler {

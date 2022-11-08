@@ -13,4 +13,4 @@ USER daemon:daemon
 WORKDIR /usr/local/application/
 EXPOSE 8080
 COPY maven .
-CMD ["java", "-cp", "./*", "com.github.phoswald.sample.jetty.Application"]
+CMD ["java", "-cp", "./*", "com.github.phoswald.sample.Application"]

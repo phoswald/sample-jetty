@@ -2,30 +2,35 @@ package com.github.phoswald.sample.task;
 
 import java.util.List;
 
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.TypedQuery;
 
 public class TaskRepository implements AutoCloseable {
 
     private final EntityManager em;
+    private boolean rollback;
 
-    public TaskRepository(EntityManager em) {
-        this.em = em;
-    }
-
-    public Transaction openTransaction() {
+    public TaskRepository(EntityManagerFactory emf) {
+        em = emf.createEntityManager();
         em.getTransaction().begin();
-        return new Transaction() {
-            @Override
-            public void close() {
-                em.getTransaction().commit();
-            }
-        };
     }
 
     @Override
     public void close() {
-        em.close();
+        try {
+            if(rollback) {
+                em.getTransaction().rollback();
+            } else {
+                em.getTransaction().commit();
+            }
+        } finally {
+            em.close();
+        }
+    }
+
+    public void setRollbackOnly() {
+        rollback = true;
     }
 
     public List<TaskEntity> selectAllTasks() {
@@ -48,10 +53,5 @@ public class TaskRepository implements AutoCloseable {
 
     public void updateChanges() {
         em.flush();
-    }
-
-    public static interface Transaction extends AutoCloseable {
-        @Override
-        public void close();
     }
 }

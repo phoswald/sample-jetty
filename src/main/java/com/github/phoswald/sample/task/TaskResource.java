@@ -2,26 +2,25 @@ package com.github.phoswald.sample.task;
 
 import java.time.Instant;
 import java.util.List;
-
-import com.github.phoswald.sample.task.TaskRepository.Transaction;
+import java.util.function.Supplier;
 
 public class TaskResource {
 
-    private final TaskRepository repository;
+    private final Supplier<TaskRepository> repositoryFactory;
 
-    public TaskResource(TaskRepository repository) {
-        this.repository = repository;
+    public TaskResource(Supplier<TaskRepository> repositoryFactory) {
+        this.repositoryFactory = repositoryFactory;
     }
 
     public List<TaskEntity> getTasks() {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             List<TaskEntity> entities = repository.selectAllTasks();
             return entities;
         }
     }
 
     public TaskEntity postTasks(TaskEntity request) {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = new TaskEntity();
             entity.setNewTaskId();
             entity.setUserId("guest");
@@ -35,14 +34,14 @@ public class TaskResource {
     }
 
     public TaskEntity getTask(String id) {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             return entity;
         }
     }
 
     public TaskEntity putTask(String id, TaskEntity request) {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             entity.setTimestamp(Instant.now());
             entity.setTitle(request.getTitle());
@@ -53,7 +52,7 @@ public class TaskResource {
     }
 
     public Void deleteTask(String id) {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             repository.deleteTask(entity);
             return null;

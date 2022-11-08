@@ -3,24 +3,23 @@ package com.github.phoswald.sample.task;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.github.phoswald.sample.task.TaskRepository.Transaction;
 
 public class TaskController {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private final TaskRepository repository;
+    private final Supplier<TaskRepository> repositoryFactory;
 
-    public TaskController(TaskRepository repository) {
-        this.repository = repository;
+    public TaskController(Supplier<TaskRepository> repositoryFactory) {
+        this.repositoryFactory = repositoryFactory;
     }
 
     public String getTasksPage() {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             List<TaskEntity> entities = repository.selectAllTasks();
             List<TaskViewModel> viewModel = TaskViewModel.newList(entities);
             return new TaskListView().render(viewModel);
@@ -31,7 +30,7 @@ public class TaskController {
             String title, //
             String description) {
         logger.info("Received from with title=" + title + ", description=" + description);
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = new TaskEntity();
             entity.setNewTaskId();
             entity.setUserId("guest");
@@ -47,7 +46,7 @@ public class TaskController {
     public String getTaskPage( //
             String id, //
             String action) {
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             TaskViewModel viewModel = new TaskViewModel(entity);
             if (Objects.equals(action, "edit")) {
@@ -65,7 +64,7 @@ public class TaskController {
             String description, //
             String done) {
         logger.info("Received from with id=" + id + ", action=" + action + ", title=" + title + ", description=" + description + ", done=" + done);
-        try(Transaction txn = repository.openTransaction()) {
+        try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             if (Objects.equals(action, "delete")) {
                 repository.deleteTask(entity);
