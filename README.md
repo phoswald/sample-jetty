@@ -4,7 +4,7 @@ Experiments with Jetty and Docker, featuring:
 
 - Static web content
 - Dynamic web content using Thymeleaf
-- REST endpoints using Gson and Xstream
+- REST endpoints
 - H2 database using JPA and Hibernate
 
 ## Run Standalone

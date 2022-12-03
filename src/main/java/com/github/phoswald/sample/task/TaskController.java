@@ -1,5 +1,6 @@
 package com.github.phoswald.sample.task;
 
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -57,7 +58,7 @@ public class TaskController {
         }
     }
 
-    public String postTaskPage( //
+    public Object postTaskPage( //
             String id, //
             String action, //
             String title, //
@@ -68,7 +69,7 @@ public class TaskController {
             TaskEntity entity = repository.selectTaskById(id);
             if (Objects.equals(action, "delete")) {
                 repository.deleteTask(entity);
-                return "REDIRECT:/app/pages/tasks";
+                return Paths.get("/app/pages/tasks");
             }
             if (Objects.equals(action, "store")) {
                 entity.setTimestamp(Instant.now());

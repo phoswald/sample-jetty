@@ -51,11 +51,11 @@ public class TaskResource {
         }
     }
 
-    public Void deleteTask(String id) {
+    public String deleteTask(String id) {
         try(TaskRepository repository = repositoryFactory.get()) {
             TaskEntity entity = repository.selectTaskById(id);
             repository.deleteTask(entity);
-            return null;
+            return "";
         }
     }
 }
