@@ -63,6 +63,11 @@ public interface ApplicationModule {
 
     public static class Global {
 
+        static {
+            // Hibernate: auto-detection falls back to JUL, slf4j is only used if logback is present
+            System.setProperty("org.jboss.logging.provider", "slf4j");
+        }
+
         private static EntityManagerFactory emf = null;
     }
 }
