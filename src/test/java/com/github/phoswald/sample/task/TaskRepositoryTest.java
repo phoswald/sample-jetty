@@ -10,7 +10,7 @@ import com.github.phoswald.sample.ApplicationModule;
 
 class TaskRepositoryTest {
 
-    private static final ApplicationModule module = new ApplicationModule() { };
+    private static final ApplicationModule module = new ApplicationModule();
 
     @Test
     void testCrud() {

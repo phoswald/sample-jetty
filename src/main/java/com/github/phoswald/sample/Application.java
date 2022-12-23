@@ -67,7 +67,7 @@ public class Application {
     }
 
     public static void main(String[] args) throws Exception {
-        var module = new ApplicationModule() { };
+        var module = new ApplicationModule();
         module.getApplication().start();
     }
 

@@ -5,12 +5,8 @@
   <persistence-unit name="taskDS">
     <class>com.github.phoswald.sample.task.TaskEntity</class>
     <properties>
-      <property name="jakarta.persistence.jdbc.driver"   value="org.h2.Driver" />
-      <property name="jakarta.persistence.jdbc.url"      value="jdbc:h2:mem:test" />
-      <property name="jakarta.persistence.jdbc.user"     value="sa" />
-      <property name="jakarta.persistence.jdbc.password" value="sa" />
-      <property name="hibernate.hbm2ddl.auto"            value="update"/>
-      <property name="hibernate.archive.scanner"         value="org.hibernate.boot.archive.scan.internal.DisabledScanner"/>
+      <property name="hibernate.hbm2ddl.auto"    value="update"/>
+      <property name="hibernate.archive.scanner" value="org.hibernate.boot.archive.scan.internal.DisabledScanner"/>
     </properties>
   </persistence-unit>
 </persistence>
