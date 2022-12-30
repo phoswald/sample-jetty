@@ -25,7 +25,7 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>11.0.12</version>
+      <version>11.0.13</version>
     </dependency>
     <dependency>
       <groupId>jakarta.xml.bind</groupId>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>org.thymeleaf</groupId>
       <artifactId>thymeleaf</artifactId>
-      <version>3.0.15.RELEASE</version>
+      <version>3.1.1.RELEASE</version>
     </dependency>
 
     <!-- Database -->
@@ -60,7 +60,7 @@
     <dependency>
       <groupId>org.hibernate.orm</groupId>
       <artifactId>hibernate-core</artifactId>
-      <version>6.1.5.Final</version>
+      <version>6.1.6.Final</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -130,7 +130,7 @@
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
-            <version>0.40.2</version>
+            <version>0.40.3</version>
             <executions>
               <execution>
                 <id>docker-build</id>
