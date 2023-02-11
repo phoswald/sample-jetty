@@ -26,7 +26,7 @@ $ docker run -it --name sample-jetty --rm \
   -p 8080:8080 \
   -e APP_SAMPLE_CONFIG=ValueFromDockerRun \
   -e APP_JDBC_URL=jdbc:h2:/databases/task-db \
-  -v "$(pwd)/../databases":/databases \
+  -v ./databases/:/databases \
   sample-jetty:0.1.0-SNAPSHOT
 ~~~
 
