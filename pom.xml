@@ -25,12 +25,12 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>11.0.14</version>
+      <version>11.0.15</version>
     </dependency>
     <dependency>
       <groupId>jakarta.xml.bind</groupId>
       <artifactId>jakarta.xml.bind-api</artifactId>
-      <version>3.0.1</version>
+      <version>4.0.0</version>
     </dependency>    
     <dependency>
       <groupId>jakarta.json.bind</groupId>
@@ -40,7 +40,7 @@
     <dependency>
       <groupId>org.eclipse</groupId>
       <artifactId>yasson</artifactId>
-      <version>3.0.2</version>
+      <version>3.0.3</version>
       <scope>runtime</scope>
     </dependency>
 
@@ -55,12 +55,12 @@
     <dependency>
       <groupId>jakarta.persistence</groupId>
       <artifactId>jakarta.persistence-api</artifactId>
-      <version>3.0.0</version>
+      <version>3.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.hibernate.orm</groupId>
       <artifactId>hibernate-core</artifactId>
-      <version>6.1.7.Final</version>
+      <version>6.2.3.Final</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -74,7 +74,7 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.9.2</version>
+      <version>5.9.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.14.2</version>
+      <version>2.15.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -99,25 +99,24 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0</version>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.5.0</version>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.6.0</version>
         <executions>
           <execution>
-            <id>copy-libs</id>
             <phase>package</phase>
             <goals>
-              <goal>copy-dependencies</goal>
+              <goal>single</goal>
             </goals>
-            <configuration>
-              <includeScope>runtime</includeScope>
-              <outputDirectory>target/lib</outputDirectory>
-            </configuration>
           </execution>
         </executions>
+        <configuration>
+          <descriptors>
+            <descriptor>src/assembly/dist.xml</descriptor>
+          </descriptors>
+        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -130,10 +129,9 @@
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
-            <version>0.41.0</version>
+            <version>0.43.0</version>
             <executions>
               <execution>
-                <id>docker-build</id>
                 <phase>package</phase>
                 <goals>
                   <goal>build</goal>
@@ -148,11 +146,7 @@
                   <build>
                     <dockerFile>Dockerfile</dockerFile>
                     <assembly>
-                      <inline>
-                        <dependencySets>
-                          <dependencySet/>
-                        </dependencySets>
-                      </inline>
+                      <descriptor>${project.basedir}/src/assembly/dist.xml</descriptor>
                     </assembly>
                   </build>
                 </image>

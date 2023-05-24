@@ -13,9 +13,10 @@ Experiments with Jetty and Docker, featuring:
 $ mvn clean verify
 $ export APP_SAMPLE_CONFIG=ValueFromShell
 $ java \
+  -cp $(echo target/sample-jetty-*-dist/lib)/"*" \
   -Dapp.http.port=8080 \
   -Dapp.jdbc.url=jdbc:h2:./databases/task-db \
-  -cp 'target/*:target/lib/*' com.github.phoswald.sample.Application
+  com.github.phoswald.sample.Application
 ~~~
 
 ## Run with Docker
