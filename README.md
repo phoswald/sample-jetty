@@ -19,6 +19,25 @@ $ java \
   com.github.phoswald.sample.Application
 ~~~
 
+## Run as Fat Jar
+
+~~~
+$ export APP_HTTP_PORT=8080
+$ mvn clean verify -P shade
+$ export APP_SAMPLE_CONFIG=ValueFromShell
+$ java \
+  -jar target/sample-jetty-*-shaded.jar \
+  -Dapp.http.port=8080 \
+  -Dapp.jdbc.url=jdbc:h2:./databases/task-db
+~~~
+
+## Deploy to Azure:
+
+~~~
+$ export APP_HTTP_PORT=8080
+$ mvn clean deploy -P shade,azure
+~~~
+
 ## Run with Docker
 
 ~~~

@@ -59,7 +59,7 @@ public class Application {
             SampleController sampleController, //
             TaskResource taskResource, //
             TaskController taskController) {
-        this.port = Integer.parseInt(config.getConfigProperty("app.http.port").orElse("8080"));
+        this.port = Integer.parseInt(config.getConfigProperty("app.http.port").orElse("80"));
         this.sampleResource = sampleResource;
         this.sampleController = sampleController;
         this.taskResource = taskResource;
