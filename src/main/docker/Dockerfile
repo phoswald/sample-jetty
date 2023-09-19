@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:20-jre-alpine
 
 ENV TZ                Europe/Zurich
 ENV LANG              de_CH.UTF-8
