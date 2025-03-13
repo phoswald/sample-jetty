@@ -1,9 +1,11 @@
 package com.github.phoswald.sample;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -16,13 +18,19 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
+import jakarta.xml.bind.JAXB;
+
+import org.eclipse.jetty.io.Content;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
-import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.Fields;
+import org.eclipse.jetty.util.resource.ResourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +41,6 @@ import com.github.phoswald.sample.task.TaskController;
 import com.github.phoswald.sample.task.TaskEntity;
 import com.github.phoswald.sample.task.TaskResource;
 import com.github.phoswald.sample.utils.ConfigProvider;
-
-import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.xml.bind.JAXB;
 
 public class Application {
 
@@ -100,15 +102,15 @@ public class Application {
     }
 
     private static Handler routes(Handler... routes) {
-        HandlerList handlers = new HandlerList();
+        Handler.Sequence handlers = new Handler.Sequence();
         Arrays.asList(routes).forEach(handlers::addHandler);
         return handlers;
     }
 
     private static Handler files(String classPath) {
         ResourceHandler handler = new ResourceHandler();
-        handler.setBaseResource(Resource.newClassPathResource(classPath));
-        handler.setDirectoriesListed(false);
+        handler.setBaseResource(ResourceFactory.of(handler).newClassLoaderResource(classPath, false));
+        handler.setDirAllowed(false);
         handler.setWelcomeFiles(new String[] { "index.html" });
         return handler;
     }
@@ -131,94 +133,93 @@ public class Application {
 
     private static Handler method(String path, String method, MyHandler handler) {
         Pattern pattern = Pattern.compile("^" + path + "$");
-        return new AbstractHandler() {
+        return new Handler.Abstract() {
             @Override
-            public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) {
+            public boolean handle(Request request, Response response, Callback callback) throws Exception {
+                String target = request.getHttpURI().getPath();
                 Matcher matcher = pattern.matcher(target);
-                if (matcher.matches() && Objects.equals(baseRequest.getMethod(), method)) {
-                    logger.info("Handling {} {}", request.getMethod(), target);
+                if (matcher.matches() && Objects.equals(request.getMethod(), method)) {
                     Map<String, String> params = new HashMap<>();
                     for (int i = 1; i <= matcher.groupCount(); i++) {
                         params.put("" + i, matcher.group(i));
                     }
-                    for (String paramName : request.getParameterMap().keySet()) {
-                        params.put(paramName, request.getParameter(paramName));
+                    Fields fields = Request.getParameters(request);
+                    for (Fields.Field field : fields) {
+                        params.put(field.getName(), field.getValue());
                     }
-                    handler.handle(params, request, response);
-                    baseRequest.setHandled(true);
+                    logger.debug("Handling {} {} with {}", method, path, params);
+                    handler.handle(request, response, callback, params);
+                    callback.succeeded();
+                    return true;
+                } else {
+                    return false;
                 }
             }
         };
     }
 
-    private static MyHandler createHandler(Function<Map<String, String>, Object> callback) {
-        return (params, request, response) -> {
-            Object result = callback.apply(params);
-            write(response, result);
+    private static MyHandler createHandler(Function<Map<String, String>, Object> handler) {
+        return (request, response, callback, params) -> {
+            Object result = handler.apply(params);
+            write(response, callback, result);
         };
     }
 
-    private static <R> MyHandler createXmlHandler(Class<R> reqClass, BiFunction<Map<String, String>, R, Object> callback) {
-        return (params, request, response) -> handleXml(response,
-                () -> callback.apply(params, deserializeXml(reqClass, read(request))));
+    private static <R> MyHandler createXmlHandler(Class<R> reqClass, BiFunction<Map<String, String>, R, Object> handler) {
+        return (request, response, callback, params) -> handleXml(response, callback,
+                () -> handler.apply(params, deserializeXml(reqClass, read(request))));
     }
 
-    private static void handleXml(HttpServletResponse response, Supplier<Object> callback) {
-        Object result = callback.get();
-        response.setContentType("text/xml");
-        write(response, serializeXml(result));
+    private static void handleXml(Response response, Callback callback, Supplier<Object> handler) {
+        Object result = handler.get();
+        response.getHeaders().add("content-type", "text/xml");
+        write(response, callback, serializeXml(result));
     }
 
-    private static MyHandler createJsonHandler(Function<Map<String, String>, Object> callback) {
-        return (params, request, response) -> handleJson(response, () -> callback.apply(params));
+    private static MyHandler createJsonHandler(Function<Map<String, String>, Object> handler) {
+        return (request, response, callback, params) -> handleJson(response, callback,
+                () -> handler.apply(params));
     }
 
-    private static <R> MyHandler createJsonHandler(Class<R> reqClass, BiFunction<Map<String, String>, R, Object> callback) {
-        return (params, request, response) -> handleJson(response,
-                () -> callback.apply(params, deserializeJson(reqClass, read(request))));
+    private static <R> MyHandler createJsonHandler(Class<R> reqClass, BiFunction<Map<String, String>, R, Object> handler) {
+        return (request, response, callback, params) -> handleJson(response, callback,
+                () -> handler.apply(params, deserializeJson(reqClass, read(request))));
     }
 
-    private static void handleJson(HttpServletResponse response, Supplier<Object> callback) {
-        Object result = callback.get();
+    private static void handleJson(Response response, Callback callback, Supplier<Object> handler) {
+        Object result = handler.get();
         if(result == null) {
             response.setStatus(404);
         } else if(result instanceof String resultString) {
-            write(response, resultString);
+            write(response, callback, resultString);
         } else {
-            response.setContentType("application/json");
-            write(response, serializeJson(result));
+            response.getHeaders().add("content-type", "application/json");
+            write(response, callback, serializeJson(result));
         }
     }
 
-    private static MyHandler createHtmlHandler(Function<Map<String, String>, Object> callback) {
-        return (params, request, response) -> handleHtml(response, () -> callback.apply(params));
+    private static MyHandler createHtmlHandler(Function<Map<String, String>, Object> handler) {
+        return (request, response, callback, params) -> handleHtml(request, response, callback, () -> handler.apply(params));
     }
 
-    private static void handleHtml(HttpServletResponse response, Supplier<Object> callback) {
-        Object result = callback.get();
+    private static void handleHtml(Request request, Response response, Callback callback, Supplier<Object> handler) {
+        Object result = handler.get();
         if(result instanceof Path resultPath) {
-            try {
-                response.sendRedirect(resultPath.toString());
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+            Response.sendRedirect(request, response, callback, resultPath.toString());
         } else {
-            response.setContentType("text/html");
-            write(response, result);
+            response.getHeaders().add("content-type", "text/html");
+            write(response, callback, result);
         }
     }
 
-    private static void write(HttpServletResponse response, Object object) {
-        try {
-            response.getOutputStream().write(object.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    private static void write(Response response, Callback callback, Object object) {
+        byte[] bytes = object.toString().getBytes(StandardCharsets.UTF_8);
+        response.write(true, ByteBuffer.wrap(bytes), callback);
     }
 
-    private static String read(HttpServletRequest request) {
-        try {
-            return new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    private static String read(Request request) {
+        try(InputStream stream = Content.Source.asInputStream(request)) {
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -243,6 +244,6 @@ public class Application {
     }
 
     interface MyHandler {
-        void handle(Map<String, String> params, HttpServletRequest request, HttpServletResponse response);
+        void handle(Request request, Response response, Callback callback, Map<String, String> params);
     }
 }
