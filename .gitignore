@@ -6,4 +6,6 @@ target/
 .factorypath
 .settings/
 
+.idea/
+
 .vscode/
