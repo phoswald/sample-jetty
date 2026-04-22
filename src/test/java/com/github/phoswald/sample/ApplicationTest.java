@@ -114,7 +114,7 @@ class ApplicationTest {
             statusCode(200).
             contentType("application/json").
             body("taskId", PeekMatcher.peek(taskId::set)).
-            body("taskId", matchesRegex("[0-9a-f-]{36}")).
+            body("taskId", matchesRegex("[0-9a-f]{32}")).
             body("userId", equalTo("guest")).
             body("title", equalTo("Test title"));
 
